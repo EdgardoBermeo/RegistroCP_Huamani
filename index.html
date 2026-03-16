@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro Civil</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d12; --sur:#111318; --sur2:#171a22; --sur3:#1e2230;
+  --bor:rgba(255,255,255,0.06); --bor2:rgba(255,255,255,0.12);
+  --acc:#5b8df5; --acc2:#3f6ed4; --acc-d:rgba(91,141,245,0.13);
+  --grn:#3ecf8e; --grn-d:rgba(62,207,142,0.1);
+  --red:#f06b6b; --red-d:rgba(240,107,107,0.1);
+  --amb:#f0b84a; --amb-d:rgba(240,184,74,0.1);
+  --pur:#a78bf5; --pur-d:rgba(167,139,245,0.12);
+  --tx:#dde1ed; --tx2:#7c8296; --tx3:#3a3f52;
+  --r:9px; --rl:15px;
+  --mono:'DM Mono',monospace; --sans:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--sans);background:var(--bg);color:var(--tx);font-size:13px;overflow:hidden}
+
+/* ══ LOGIN ══ */
+#loginScreen{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  z-index:300;padding:1rem;
+}
+.lcard{
+  width:100%;max-width:380px;background:var(--sur);
+  border:1px solid var(--bor2);border-radius:var(--rl);
+  padding:2rem;animation:fadeUp .3s ease;
+}
+.llogo{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--acc-d);border:1px solid rgba(91,141,245,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin:0 auto 1.1rem;
+}
+.lcard h1{font-size:18px;font-weight:600;text-align:center;margin-bottom:3px}
+.lsub{color:var(--tx2);font-size:11px;text-align:center;margin-bottom:1.5rem}
+.fg{margin-bottom:.75rem}
+.fg label{display:block;font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fg input{
+  width:100%;padding:9px 13px;
+  background:var(--sur2);border:1px solid var(--bor2);
+  border-radius:var(--r);color:var(--tx);
+  font-family:var(--mono);font-size:14px;outline:none;
+  transition:border-color .18s;-webkit-appearance:none;
+}
+.fg input:focus{border-color:var(--acc)}
+.fg-pass{position:relative}
+.fg-pass input{padding-right:42px}
+.eye-btn{
+  position:absolute;right:0;top:0;bottom:0;
+  width:40px;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--tx3);font-size:16px;border-radius:0 var(--r) var(--r) 0;
+  transition:color .15s;-webkit-appearance:none;
+}
+.eye-btn:hover{color:var(--tx2)}
+.lbtn{
+  width:100%;padding:10px;background:var(--acc);border:none;
+  border-radius:var(--r);color:#fff;font-family:var(--sans);
+  font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;
+  transition:background .18s,transform .1s;-webkit-appearance:none;
+}
+.lbtn:hover{background:var(--acc2)}.lbtn:active{transform:scale(.97)}
+.lerr{
+  color:var(--red);font-size:11px;margin-top:9px;
+  padding:7px 11px;background:var(--red-d);
+  border-radius:7px;display:none;text-align:center;
+}
+.lhint{color:var(--tx3);font-size:10px;margin-top:12px;text-align:center}
+.lhint b{color:var(--tx2);font-family:var(--mono)}
+
+/* ══ APP ══ */
+#app{display:none;height:100vh;flex-direction:column}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:48px;background:var(--sur);border-bottom:1px solid var(--bor);
+  display:flex;align-items:center;padding:0 14px;gap:7px;
+  flex-shrink:0;z-index:20;
+}
+.tlogo{
+  font-family:var(--mono);font-size:12px;font-weight:500;
+  color:var(--acc);white-space:nowrap;margin-right:2px;
+}
+.tsep{width:1px;height:20px;background:var(--bor);flex-shrink:0}
+.tchip{
+  display:flex;align-items:baseline;gap:3px;
+  padding:3px 9px;border-radius:20px;
+  background:var(--sur2);border:1px solid var(--bor);
+  white-space:nowrap;
+}
+.tchip-n{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--tx)}
+.tchip-l{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
+.tchip.h .tchip-n{color:var(--acc)}
+.tchip.m .tchip-n{color:var(--pur)}
+.tsp{flex:1}
+.gpill{
+  display:flex;align-items:center;gap:4px;font-size:10px;
+  padding:3px 9px;border-radius:20px;
+  border:1px solid var(--bor);color:var(--tx3);
+  transition:all .35s;white-space:nowrap;
+}
+.gpill.dirty{color:var(--amb);border-color:rgba(240,184,74,.4);background:var(--amb-d)}
+.gpill.ok{color:var(--grn);border-color:rgba(62,207,142,.4);background:var(--grn-d)}
+.gdot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.tbtn{
+  padding:5px 11px;border-radius:var(--r);border:1px solid var(--bor2);
+  background:transparent;color:var(--tx);font-family:var(--sans);
+  font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;
+  transition:background .13s;white-space:nowrap;flex-shrink:0;
+  -webkit-appearance:none;
+}
+.tbtn:hover{background:var(--sur2)}
+.tbtn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:500}
+.tbtn.pri:hover{background:var(--acc2)}
+.tbtn.suc{color:var(--grn)}.tbtn.suc:hover{background:var(--grn-d);border-color:rgba(62,207,142,.3)}
+.tbtn.dan{color:var(--red)}.tbtn.dan:hover{background:var(--red-d);border-color:rgba(240,107,107,.3)}
+input[type=file]#fileInput{display:none}
+
+/* ── CONTENEDOR SCROLLABLE ── */
+.main{
+  flex:1;overflow:hidden;display:flex;
+  flex-direction:column;min-height:0;
+}
+/* este div hace el scroll de toda la tabla incluyendo el thead sticky */
+.twrap{
+  flex:1;overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  position:relative;
+}
+
+/* ── TABLA ── */
+table{
+  width:100%;border-collapse:collapse;
+  font-size:12px;table-layout:fixed;
+  min-width:820px;
+}
+colgroup col{overflow:hidden}
+col.c-num  {width:34px}
+col.c-libro{width:66px}
+col.c-acta {width:92px}
+col.c-pat  {width:16%}
+col.c-mat  {width:15%}
+col.c-nom  {width:auto}
+col.c-fecha{width:90px}
+col.c-sexo {width:78px}
+col.c-acc  {width:80px}
+
+/* CABECERA STICKY — siempre visible al hacer scroll */
+thead{position:sticky;top:0;z-index:10}
+
+/* fila 1: etiquetas + ordenamiento */
+thead tr.hr th{
+  background:var(--sur);
+  padding:8px 8px 4px;
+  text-align:left;
+  font-size:9px;font-weight:500;color:var(--tx2);
+  text-transform:uppercase;letter-spacing:.07em;
+  border-bottom:none;
+  cursor:pointer;user-select:none;white-space:nowrap;
+  transition:color .13s;
+}
+thead tr.hr th:hover{color:var(--tx)}
+thead tr.hr th .si{margin-left:2px;opacity:.25;font-size:8px;transition:opacity .15s}
+thead tr.hr th.sorted .si{opacity:1;color:var(--acc)}
+thead tr.hr th:first-child,
+thead tr.hr th:last-child{cursor:default}
+
+/* fila 2: inputs de filtro */
+thead tr.fr th{
+  background:var(--sur2);
+  padding:3px 5px 7px;
+  border-bottom:2px solid var(--bor2);
+}
+thead tr.fr th input,
+thead tr.fr th select{
+  width:100%;padding:5px 7px;
+  background:var(--sur3);border:1px solid var(--bor);
+  border-radius:6px;color:var(--tx);font-size:11px;
+  font-family:var(--sans);outline:none;
+  transition:border-color .15s;-webkit-appearance:none;
+}
+thead tr.fr th input::placeholder{color:var(--tx3)}
+thead tr.fr th input:focus,
+thead tr.fr th select:focus{border-color:var(--acc);background:rgba(91,141,245,.05)}
+thead tr.fr th select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%237c8296'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 6px center;
+  padding-right:18px;background-color:var(--sur3);cursor:pointer;
+}
+thead tr.fr th select option{background:#1e2230}
+
+/* celda de búsqueda global */
+.gs{position:relative;display:flex;align-items:center}
+.gs input{padding-left:22px!important}
+.gs-ico{
+  position:absolute;left:7px;color:var(--tx3);
+  font-size:11px;pointer-events:none;
+}
+.gs-clr{
+  position:absolute;right:5px;width:15px;height:15px;
+  border:none;background:transparent;color:var(--tx3);
+  cursor:pointer;font-size:11px;
+  display:none;align-items:center;justify-content:center;
+  border-radius:3px;padding:0;line-height:1;-webkit-appearance:none;
+}
+.gs-clr.v{display:flex}
+.gs-clr:hover{color:var(--tx);background:var(--bor2)}
+
+/* botón limpiar todo */
+.clr-all{
+  width:100%;padding:5px 0;
+  background:var(--sur3);border:1px solid var(--bor);
+  border-radius:6px;color:var(--tx3);cursor:pointer;
+  font-size:10px;font-family:var(--sans);
+  transition:color .13s,background .13s;-webkit-appearance:none;
+}
+.clr-all:hover{color:var(--red);background:var(--red-d);border-color:rgba(240,107,107,.3)}
+
+/* ── FILAS ── */
+tbody tr{border-bottom:1px solid var(--bor);transition:background .08s}
+tbody tr:hover{background:var(--sur2)}
+tbody td{
+  padding:8px 8px;color:var(--tx);
+  overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;vertical-align:middle;
+}
+tbody td:first-child{
+  color:var(--tx3);font-family:var(--mono);
+  font-size:10px;text-align:center;
+}
+tbody td:last-child{overflow:visible;white-space:nowrap}
+
+/* badges sexo */
+.bm{
+  display:inline-flex;align-items:center;gap:2px;
+  padding:2px 7px;border-radius:20px;
+  font-size:10px;font-weight:500;font-family:var(--mono);
+}
+.bh{background:var(--acc-d);color:var(--acc)}
+.bf{background:var(--pur-d);color:var(--pur)}
+
+/* botones acción */
+.abtn{
+  padding:3px 7px;border-radius:5px;border:1px solid transparent;
+  cursor:pointer;font-size:10px;font-family:var(--sans);
+  background:transparent;transition:all .12s;-webkit-appearance:none;
+}
+.abtn.ed{color:var(--acc)}.abtn.ed:hover{background:var(--acc-d);border-color:rgba(91,141,245,.3)}
+.abtn.dl{color:var(--red)}.abtn.dl:hover{background:var(--red-d);border-color:rgba(240,107,107,.3)}
+
+/* resaltado búsqueda */
+mark.hl{background:rgba(240,184,74,.22);color:var(--amb);border-radius:2px}
+
+/* estado vacío */
+.empty-s{text-align:center;padding:5rem 1rem;color:var(--tx3)}
+.empty-s .ei{font-size:32px;margin-bottom:.7rem}
+.empty-s h2{font-size:15px;color:var(--tx2);margin-bottom:5px;font-weight:500}
+.empty-s p{font-size:11px;line-height:1.9;color:var(--tx3)}
+.empty-s kbd{
+  display:inline-block;background:var(--sur2);border:1px solid var(--bor2);
+  border-radius:5px;padding:1px 7px;font-size:10px;
+  font-family:var(--mono);color:var(--tx2);margin:0 2px;
+}
+
+/* barra de conteo inferior (no paginación) */
+.countbar{
+  height:32px;background:var(--sur);border-top:1px solid var(--bor);
+  display:flex;align-items:center;padding:0 14px;gap:10px;
+  flex-shrink:0;
+}
+.cinfo{font-size:10px;color:var(--tx2);font-family:var(--mono)}
+.cinfo span{color:var(--tx);font-weight:500}
+
+/* ══ MODAL ══ */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;opacity:0;pointer-events:none;
+  transition:opacity .18s;padding:1rem;
+}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--sur);border:1px solid var(--bor2);
+  border-radius:var(--rl);width:100%;max-width:520px;
+  max-height:90vh;display:flex;flex-direction:column;
+  transform:scale(.97) translateY(10px);
+  transition:transform .2s ease;
+}
+.overlay.open .modal{transform:scale(1) translateY(0)}
+.mh{
+  padding:.9rem 1.1rem;border-bottom:1px solid var(--bor);
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.mh h2{font-size:14px;font-weight:500;flex:1}
+.mbadge{
+  font-size:10px;color:var(--tx2);
+  padding:2px 9px;background:var(--sur2);
+  border-radius:20px;font-family:var(--mono);
+}
+.mclose{
+  width:24px;height:24px;border-radius:5px;border:none;
+  background:transparent;color:var(--tx2);cursor:pointer;
+  font-size:15px;display:flex;align-items:center;
+  justify-content:center;transition:background .13s;
+  -webkit-appearance:none;
+}
+.mclose:hover{background:var(--sur3);color:var(--tx)}
+.mbody{padding:1.1rem;overflow-y:auto;flex:1}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.mgrid .full{grid-column:1/-1}
+.mf label{
+  display:block;font-size:9px;color:var(--tx2);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;
+}
+.req{color:var(--acc);margin-left:1px}
+.mf input,.mf select{
+  width:100%;padding:9px 11px;
+  background:var(--sur2);border:1px solid var(--bor2);
+  border-radius:var(--r);color:var(--tx);font-family:var(--sans);
+  font-size:13px;outline:none;
+  transition:border-color .15s;-webkit-appearance:none;
+}
+.mf input:focus,.mf select:focus{border-color:var(--acc)}
+.mf select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%237c8296'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  padding-right:26px;background-color:var(--sur2);
+}
+.mf select option{background:#171a22}
+.mfoot{
+  padding:.8rem 1.1rem;border-top:1px solid var(--bor);
+  display:flex;justify-content:flex-end;gap:7px;flex-shrink:0;
+}
+.bcnl{
+  padding:8px 14px;border-radius:var(--r);
+  border:1px solid var(--bor2);background:transparent;
+  color:var(--tx2);cursor:pointer;font-family:var(--sans);
+  font-size:12px;transition:background .13s;-webkit-appearance:none;
+}
+.bcnl:hover{background:var(--sur2)}
+.bsav{
+  padding:8px 18px;border-radius:var(--r);border:none;
+  background:var(--acc);color:#fff;cursor:pointer;
+  font-family:var(--sans);font-size:12px;font-weight:600;
+  transition:background .13s;-webkit-appearance:none;
+}
+.bsav:hover{background:var(--acc2)}
+
+/* ══ TOAST ══ */
+#toast{
+  position:fixed;bottom:44px;left:50%;
+  transform:translateX(-50%) translateY(8px);
+  z-index:999;padding:8px 16px;border-radius:var(--r);
+  font-size:12px;font-weight:500;pointer-events:none;
+  opacity:0;transition:transform .22s,opacity .22s;white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+#toast.g{background:var(--grn);color:#072918}
+#toast.r{background:var(--red);color:#2a0808}
+#toast.b{background:var(--acc);color:#fff}
+#toast.a{background:var(--amb);color:#1e1200}
+
+/* ══ RESPONSIVE COMPLETO ══ */
+
+/* Tablet (≤900px): ocultar chips, abreviar botones */
+@media(max-width:900px){
+  .tchip.h,.tchip.m{display:none}
+}
+
+/* Móvil (≤640px): vista de tarjetas en lugar de tabla */
+@media(max-width:640px){
+  /* topbar compacta */
+  .topbar{padding:0 10px;gap:5px;height:50px}
+  .tlogo{font-size:11px}
+  .tchip{display:none}
+  .tsep{display:none}
+  .tbtn span.lbl{display:none}
+  .tbtn{padding:7px 9px;font-size:13px}
+  .gpill span:not(.gdot){display:none}
+  .gpill{padding:5px 7px}
+
+  /* barra búsqueda compacta */
+  .searchbar{padding:8px 10px}
+  .sb-wrap input{font-size:14px;padding:10px 0}
+
+  /* OCULTAR tabla completa en móvil */
+  #tbl{display:none!important}
+
+  /* MOSTRAR lista de tarjetas */
+  #cardList{display:block!important}
+
+  /* countbar más pequeña */
+  .countbar{padding:6px 10px}
+}
+
+/* PC/Tablet grande (>640px): ocultar lista de tarjetas */
+@media(min-width:641px){
+  #cardList{display:none!important}
+}
+
+/* Tarjetas móvil */
+#cardList{
+  display:none;
+  padding:8px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.rcard{
+  background:var(--sur);border:1px solid var(--bor2);
+  border-radius:12px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:6px;
+  transition:background .1s;
+}
+.rcard:active{background:var(--sur2)}
+.rcard-top{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.rcard-name{
+  font-size:14px;font-weight:600;color:var(--tx);
+  flex:1;line-height:1.3;
+}
+.rcard-acta{
+  font-family:var(--mono);font-size:11px;
+  color:var(--tx3);white-space:nowrap;
+}
+.rcard-meta{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+}
+.rcard-chip{
+  font-size:11px;color:var(--tx2);
+  background:var(--sur2);border:1px solid var(--bor);
+  border-radius:6px;padding:2px 8px;white-space:nowrap;
+}
+.rcard-chip.acc{color:var(--acc);background:var(--acc-d);border-color:rgba(91,141,245,.2)}
+.rcard-actions{
+  display:flex;gap:8px;padding-top:4px;
+  border-top:1px solid var(--bor);margin-top:2px;
+}
+.rcard-btn{
+  flex:1;padding:8px;border-radius:8px;border:1px solid var(--bor2);
+  background:transparent;font-family:var(--sans);font-size:12px;
+  cursor:pointer;transition:all .13s;-webkit-appearance:none;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.rcard-btn.ed{color:var(--acc)}.rcard-btn.ed:active{background:var(--acc-d);border-color:rgba(91,141,245,.3)}
+.rcard-btn.dl{color:var(--red)}.rcard-btn.dl:active{background:var(--red-d);border-color:rgba(240,107,107,.3)}
+
+/* Modal en móvil: desliza desde abajo */
+@media(max-width:640px){
+  .overlay{align-items:flex-end;padding:0}
+  .modal{
+    border-radius:16px 16px 0 0;max-height:92vh;
+    transform:translateY(40px);
+  }
+  .overlay.open .modal{transform:translateY(0)}
+  .mgrid{grid-template-columns:1fr}
+  .mgrid .full{grid-column:1}
+  .mf input,.mf select{font-size:16px;padding:11px 12px}
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--sur3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#2a2f42}
+
+/* ══ BARRA BÚSQUEDA GLOBAL ══ */
+.searchbar{
+  background:var(--sur);border-bottom:2px solid var(--acc-d);
+  padding:8px 14px;flex-shrink:0;display:flex;
+  flex-direction:column;gap:5px;
+}
+.sb-wrap{
+  display:flex;align-items:center;gap:8px;
+  background:var(--sur2);border:1.5px solid var(--bor2);
+  border-radius:10px;padding:0 10px;
+  transition:border-color .18s;
+}
+.sb-wrap:focus-within{border-color:var(--acc);background:rgba(91,141,245,.04)}
+.sb-ico{font-size:14px;color:var(--tx2);flex-shrink:0}
+.sb-wrap input{
+  flex:1;padding:9px 0;background:transparent;
+  border:none;outline:none;color:var(--tx);
+  font-family:var(--sans);font-size:13px;
+  -webkit-appearance:none;
+}
+.sb-wrap input::placeholder{color:var(--tx3)}
+.sb-clr{
+  padding:4px 10px;border-radius:6px;border:1px solid var(--bor2);
+  background:transparent;color:var(--tx3);cursor:pointer;
+  font-size:11px;font-family:var(--sans);white-space:nowrap;
+  transition:all .13s;-webkit-appearance:none;display:none;
+  align-items:center;
+}
+.sb-clr.v{display:flex}
+.sb-clr:hover{color:var(--red);border-color:rgba(240,107,107,.4);background:var(--red-d)}
+.sb-hint{
+  font-size:11px;color:var(--tx2);padding-left:2px;
+  display:flex;align-items:center;gap:6px;
+}
+.sb-hint span#sbTerm{
+  color:var(--acc);font-family:var(--mono);
+  background:var(--acc-d);padding:1px 7px;border-radius:4px;
+}
+.sb-hint span#sbCount{font-weight:600;color:var(--grn)}
+
+</style>
+<script>
+
+// ══ CONFIG ══
+// Contraseñas almacenadas como hash SHA-256 (no se guarda la clave real)
+// Para cambiar la clave: genera el hash en https://emn178.github.io/online-tools/sha256.html
+const USERS = {
+  Modesto: '6b058469e431a432182a49da0545fbe0c74f6c87ae6889dbc1d91e4bde56b99c'
+};
+
+// ▼▼▼ PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ▼▼▼
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjf2S8kYzGucmY4FIbdOxlYab7ctm0QJsEY_hgFkbVTj8bJr0mLVfGA2lsY_KJdxuo/exec';
+// ▲▲▲ Ejemplo: 'https://script.google.com/macros/s/XXXX/exec' ▲▲▲
+
+// SHA-256 puro en JavaScript (funciona en cualquier contexto sin HTTPS)
+async function sha256(msg){
+  // Intentar con crypto.subtle primero (más rápido)
+  if(window.crypto && window.crypto.subtle){
+    try{
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }catch(e){}
+  }
+  // Fallback: implementación pura JS
+  return sha256Pure(msg);
+}
+
+function sha256Pure(str){
+  function rr32(val,n){return(val>>>n)|(val<<(32-n))}
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+  const bytes=new TextEncoder().encode(str);
+  const bits=bytes.length*8;
+  const arr=[...bytes,0x80];
+  while(arr.length%64!==56)arr.push(0);
+  arr.push(0,0,0,0,...[24,16,8,0].map(s=>(bits>>>s)&0xff));
+  for(let i=0;i<arr.length;i+=64){
+    const w=new Array(64);
+    for(let j=0;j<16;j++)w[j]=(arr[i+j*4]<<24)|(arr[i+j*4+1]<<16)|(arr[i+j*4+2]<<8)|arr[i+j*4+3];
+    for(let j=16;j<64;j++){const s0=rr32(w[j-15],7)^rr32(w[j-15],18)^(w[j-15]>>>3);const s1=rr32(w[j-2],17)^rr32(w[j-2],19)^(w[j-2]>>>10);w[j]=(w[j-16]+s0+w[j-7]+s1)>>>0}
+    let[a,b,c,d,e,f,g,h]=[h0,h1,h2,h3,h4,h5,h6,h7];
+    for(let j=0;j<64;j++){const S1=rr32(e,6)^rr32(e,11)^rr32(e,25);const ch=(e&f)^(~e&g);const t1=(h+S1+ch+K[j]+w[j])>>>0;const S0=rr32(a,2)^rr32(a,13)^rr32(a,22);const maj=(a&b)^(a&c)^(b&c);const t2=(S0+maj)>>>0;[h,g,f,e,d,c,b,a]=[g,f,e,(d+t1)>>>0,c,b,a,(t1+t2)>>>0]}
+    h0=(h0+a)>>>0;h1=(h1+b)>>>0;h2=(h2+c)>>>0;h3=(h3+d)>>>0;h4=(h4+e)>>>0;h5=(h5+f)>>>0;h6=(h6+g)>>>0;h7=(h7+h)>>>0;
+  }
+  return [h0,h1,h2,h3,h4,h5,h6,h7].map(v=>v.toString(16).padStart(8,'0')).join('');
+}
+const STORE_K = 'regCivil_data_v3';
+const STORE_M = 'regCivil_meta_v3';
+const H       = ['Nº Libro','Nº Acta','Apellido Paterno','Apellido Materno','Nombre','Fecha de Nacimiento','Sexo'];
+
+// ══ ESTADO ══
+let allData=[], filtered=[];
+let sc=-1, sd=1, ei=null, gsMode=false;
+let cloudMode = false;   // true cuando SCRIPT_URL está configurado
+let syncing   = false;
+
+// ══ UTILIDADES ══
+const g   = id => document.getElementById(id);
+const esc = s  => String(s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let tt;
+function toast(msg, t='b'){
+  const el=g('toast');
+  el.textContent=msg; el.className='show '+t;
+  clearTimeout(tt); tt=setTimeout(()=>el.className='',2500);
+}
+
+// ══ PERSISTENCIA ══
+
+// ── localStorage (respaldo local) ──
+function saveLocal(){
+  try{
+    const enc = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
+    localStorage.setItem(STORE_K, enc);
+    localStorage.setItem(STORE_M, JSON.stringify({ts:Date.now(),n:allData.length}));
+  }catch(e){}
+}
+
+function loadLocal(){
+  try{
+    const r=localStorage.getItem(STORE_K);
+    if(!r) return false;
+    try{ allData=JSON.parse(decodeURIComponent(escape(atob(r)))); }
+    catch{ allData=JSON.parse(r); }
+    return allData.length>0;
+  }catch(e){ return false; }
+}
+
+// ── Google Sheets (nube) ──
+async function cloudCall(body){
+  const r = await fetch(SCRIPT_URL, {
+    method:'POST',
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function loadCloud(){
+  setSyncPill('sync');
+  try{
+    const res = await cloudCall({action:'getAll'});
+    if(res.ok){
+      allData = res.data;
+      saveLocal(); // copia local de respaldo
+      return true;
+    }
+  }catch(e){ console.warn('Error nube:', e); }
+  setSyncPill('err');
+  return false;
+}
+
+async function saveCloud(action, payload){
+  setSyncPill('sync');
+  saveLocal(); // guardar local siempre
+  if(!cloudMode){ setPill('ok'); return; }
+  try{
+    const res = await cloudCall({action, ...payload});
+    if(res.ok){ setPill('ok'); }
+    else { setSyncPill('err'); toast('Error al guardar en la nube','r'); }
+  }catch(e){ setSyncPill('err'); toast('Sin conexión — guardado solo local','a'); }
+}
+
+function setSyncPill(state){
+  const p=g('gpill'), t=g('gtxt');
+  if(state==='sync'){ p.className='gpill dirty'; t.textContent='Sincronizando…'; }
+  else if(state==='err'){ p.className='gpill dirty'; t.textContent='Error de conexión'; }
+}
+
+function loadStored(){ return loadLocal(); }
+function save(){ saveLocal(); setPill('ok'); }
+// autoSave se define arriba — ya incluye saveLocal()
+
+function setPill(state){
+  const p=g('gpill'), t=g('gtxt');
+  p.className='gpill '+state;
+  if(state==='dirty'){ t.textContent='Sin guardar'; }
+  else{ t.textContent='Guardado'; setTimeout(()=>{ p.className='gpill'; t.textContent='Guardado'; },1800); }
+}
+
+function autoSave(){ setPill('dirty'); save(); }
+
+// Mostrar / ocultar contraseña
+function togglePass(){
+  const inp=g('lp'), btn=g('eyeBtn');
+  const visible = inp.type==='text';
+  inp.type = visible ? 'password' : 'text';
+  btn.textContent = visible ? '👁' : '🙈';
+  btn.title = visible ? 'Mostrar contraseña' : 'Ocultar contraseña';
+  inp.focus();
+}
+// Ocultar error al escribir
+// eventos se asignan en window.onload abajo
+
+// ══ LOGIN ══
+async function doLogin(){
+  if(loginBlocked) return;
+  const u=g('lu').value.trim(), p=g('lp').value;
+  if(!USERS[u]){ showLoginError(); return; }
+  // Comparar el hash de lo que escribió el usuario con el hash guardado
+  const hashed = await sha256(p);
+  if(hashed === USERS[u]){
+    g('loginScreen').style.display='none';
+    g('app').style.cssText='display:flex;flex-direction:column;height:100vh';
+    cloudMode = SCRIPT_URL && SCRIPT_URL.trim() !== '';
+    if(cloudMode){
+      // Mostrar datos locales primero mientras carga la nube
+      loadLocal(); if(allData.length>0){ revealTable(); doFilter(); }
+      toast('Conectando con Google Sheets…','b');
+      loadCloud().then(ok=>{
+        if(ok){
+          revealTable(); doFilter();
+          toast(`${allData.length} registros cargados desde la nube ☁`, 'g');
+        } else {
+          if(allData.length>0) toast('Nube no disponible — mostrando datos locales','a');
+          else toast('Bienvenido, '+u,'g');
+        }
+      });
+    } else {
+      // Sin nube: usar localStorage
+      if(loadLocal() && allData.length>0){
+        const m=JSON.parse(localStorage.getItem(STORE_M)||'{}');
+        const f=m.ts?new Date(m.ts).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'}):'';
+        revealTable(); doFilter();
+        toast(`${allData.length} registros restaurados${f?' · '+f:''}`, 'b');
+      } else {
+        toast('Bienvenido, '+u,'g');
+      }
+    }
+  } else {
+    showLoginError();
+  }
+}
+let loginAttempts = 0;
+let loginBlocked  = false;
+
+function showLoginError(){
+  loginAttempts++;
+  if(loginAttempts >= 5){
+    loginBlocked = true;
+    g('lerr').textContent = 'Demasiados intentos. Espera 30 segundos.';
+    g('lerr').style.display='block';
+    g('lp').disabled = true;
+    g('lu').disabled = true;
+    setTimeout(()=>{
+      loginBlocked=false; loginAttempts=0;
+      g('lp').disabled=false; g('lu').disabled=false;
+      g('lerr').style.display='none';
+      g('lerr').textContent='Usuario o contraseña incorrectos';
+    }, 30000);
+    return;
+  }
+  const restantes = 5 - loginAttempts;
+  g('lerr').textContent = restantes > 1
+    ? `Usuario o contraseña incorrectos (${restantes} intentos restantes)`
+    : 'Último intento antes de bloqueo temporal';
+  g('lerr').style.display='block';
+  g('lp').value='';
+  setTimeout(()=>g('lp').focus(),40);
+}
+// onkeydown se asigna en window.onload abajo
+
+function doLogout(){
+  g('loginScreen').style.display='flex';
+  g('app').style.display='none';
+  g('lu').value=''; g('lp').value=''; g('lerr').style.display='none';
+}
+
+// ══ CONVERSIÓN DE FECHAS EXCEL ══
+// Excel almacena fechas como número de días desde 01/01/1900
+// Ej: 45123 → "15/06/2023"
+// ══ CONVERSIÓN DE FECHAS ══
+// Maneja los 3 casos que puede devolver la librería XLSX:
+//   1. Objeto Date de JS  (cuando cellDates:true)
+//   2. Número serial      (ej: 34567 → días desde 1/1/1900)
+//   3. Texto ya legible   (ej: "15/06/1995", "1995-06-15")
+function toDateStr(val){
+  if(val===''||val===null||val===undefined) return '';
+
+  // Caso 1: objeto Date de JavaScript
+  if(val instanceof Date){
+    if(isNaN(val.getTime())) return '';
+    const dd  = String(val.getUTCDate()).padStart(2,'0');
+    const mm  = String(val.getUTCMonth()+1).padStart(2,'0');
+    const yyyy= val.getUTCFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // Caso 2: número serial de Excel (entero o decimal)
+  if(typeof val === 'number'){
+    const n = Math.floor(val); // ignorar fracción de hora
+    if(n < 1 || n > 200000) return String(val); // fuera de rango razonable
+    // Epoch Excel: 30/12/1899 (compensa el bug del año bisiesto 1900)
+    const d = new Date(Date.UTC(1899,11,30) + n * 86400000);
+    if(isNaN(d.getTime())) return String(val);
+    const dd  = String(d.getUTCDate()).padStart(2,'0');
+    const mm  = String(d.getUTCMonth()+1).padStart(2,'0');
+    const yyyy= d.getUTCFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // Caso 3: ya es texto — normalizar separadores
+  const s = String(val).trim();
+  if(!s) return '';
+  // Formato ISO: 1995-06-15 → 15/06/1995
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  // Formato con puntos: 15.06.1995 → 15/06/1995
+  const dot = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(dot) return `${dot[1].padStart(2,'0')}/${dot[2].padStart(2,'0')}/${dot[3]}`;
+  // Ya viene con / → devolver tal cual
+  return s;
+}
+
+// ══ IMPORTAR EXCEL ══
+// fileInput.onchange se asigna en window.onload abajo
+
+async function importExcel(file){
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      // cellDates:true → XLSX convierte seriales a objetos Date automáticamente
+      const wb=XLSX.read(e.target.result,{type:'binary', cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      // raw:false → devuelve valores formateados cuando no sea fecha
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      if(!json||json.length<2){ toast('Archivo vacío','r'); return; }
+      const fh=json[0].map(String);
+
+      // Segunda pasada con raw:true para obtener el valor real de fechas
+      const jsonRaw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+
+      const imp=json.slice(1).map((row,ri)=>{
+        const rowRaw = jsonRaw[ri+1] || [];
+        const o={};
+        H.forEach(h=>{
+          const fi=fh.findIndex(x=>x.trim().toLowerCase()===h.toLowerCase());
+          if(fi<0){ o[h]=''; return; }
+          if(h==='Fecha de Nacimiento'){
+            // Usar el valor raw (puede ser Date, número o texto) para conversión precisa
+            const rawVal = rowRaw[fi]!==undefined ? rowRaw[fi] : row[fi];
+            o[h] = toDateStr(rawVal);
+          } else {
+            // trim() elimina espacios extra al inicio/final (ej: 'Bermeo ')
+            o[h] = String(row[fi]!==undefined ? row[fi] : '').trim();
+          }
+        });
+        return o;
+      }).filter(r=>r['Nº Acta']||r['Apellido Paterno']||r['Nombre']);
+
+      if(allData.length>0){
+        const rep=confirm(
+          `Ya tienes ${allData.length} registros en memoria.\n\n`+
+          `✅ Aceptar = REEMPLAZAR todo con los ${imp.length} del Excel\n`+
+          `➕ Cancelar = AGREGAR los ${imp.length} al final`
+        );
+        allData = rep ? imp : allData.concat(imp);
+      } else {
+        allData=imp;
+      }
+      sc=-1;
+      revealTable(); saveLocal(); doFilter();
+      if(cloudMode){
+        toast(`Importados ${imp.length} registros — subiendo a la nube…`,'b');
+        // Subir todos los registros: reemplazar hoja completa
+        for(let i=0;i<allData.length;i++){
+          await cloudCall({action:'add', row:allData[i]});
+        }
+        toast(`${imp.length} registros subidos a Google Sheets ☁`,'g');
+      } else {
+        toast(`Importados: ${imp.length} registros`,'b');
+      }
+    }catch(err){ toast('Error al leer el archivo','r'); console.error(err); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function revealTable(){
+  g('tbl').style.display='';
+  g('emptyS').style.display='none';
+  g('countbar').style.display='flex';
+}
+
+// ══ BÚSQUEDA GLOBAL (campo Ap. Paterno = buscador global) ══
+function onGS(inp){
+  gsMode = inp.value.trim().length > 0;
+  g('gClr').classList.toggle('v', gsMode);
+  doFilter();
+}
+function clearGS(){
+  g('fP').value=''; gsMode=false;
+  g('gClr').classList.remove('v');
+  doFilter(); g('fP').focus();
+}
+
+// ══ FILTRAR ══
+function doFilter(){
+  const qG  = g('qGlobal').value.toLowerCase().trim(); // búsqueda global
+  const fL  = g('fL').value.toLowerCase().trim();
+  const fA  = g('fA').value.toLowerCase().trim();
+  const fPv = g('fP').value.toLowerCase().trim();
+  const fM  = g('fM').value.toLowerCase().trim();
+  const fN  = g('fN').value.toLowerCase().trim();
+  const fF  = g('fF').value.toLowerCase().trim();
+  const fS  = g('fS').value;
+
+  filtered = allData.filter(row=>{
+    // Texto completo combinado para búsqueda multi-palabra
+    // Ej: "bermeo bermeo juan" busca en "paterno materno nombre" junto
+    const fullName = [
+      row['Apellido Paterno'], row['Apellido Materno'], row['Nombre']
+    ].map(v=>String(v||'').toLowerCase()).join(' ');
+    // Normalizar: quitar espacios extra para comparación correcta
+    const normalize = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+    const fullAll = H.map(h=>normalize(row[h])).join(' ');
+
+    // Buscador global: cada palabra debe aparecer en algún campo
+    if(qG){
+      const words = qG.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);
+      const match = words.every(w => fullAll.includes(w));
+      if(!match) return false;
+    }
+    // Filtros por columna: acumulativos
+    if(gsMode && fPv){
+      const words = fPv.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);
+      if(!words.every(w => fullAll.includes(w))) return false;
+    } else if(!gsMode && fPv){
+      if(!String(row['Apellido Paterno']).toLowerCase().includes(fPv)) return false;
+    }
+    if(fL && !String(row['Nº Libro']).toLowerCase().includes(fL))            return false;
+    if(fA && !String(row['Nº Acta']).toLowerCase().includes(fA))             return false;
+    if(fM && !String(row['Apellido Materno']).toLowerCase().includes(fM))    return false;
+    if(fN && !String(row['Nombre']).toLowerCase().includes(fN))              return false;
+    if(fF && !String(row['Fecha de Nacimiento']).toLowerCase().includes(fF)) return false;
+    if(fS && String(row['Sexo']) !== fS)                                     return false;
+    return true;
+  });
+
+  // actualizar hint de búsqueda global
+  const hint = g('sbHint');
+  if(qG){
+    hint.style.display='flex';
+    g('sbCount').textContent = filtered.length;
+    g('sbTerm').textContent  = qG;
+  } else {
+    hint.style.display='none';
+  }
+
+  // ordenar
+  if(sc>=0){
+    const h=H[sc];
+    filtered.sort((a,b)=>{
+      const va=a[h], vb=b[h];
+      const na=parseFloat(va), nb=parseFloat(vb);
+      if(!isNaN(na)&&!isNaN(nb)) return (na-nb)*sd;
+      return String(va).localeCompare(String(vb),'es')*sd;
+    });
+  }
+
+  // contadores topbar
+  g('cTot').textContent = allData.length;
+  g('cFil').textContent = filtered.length;
+  g('cH').textContent   = filtered.filter(r=>String(r['Sexo'])==='1').length;
+  g('cM').textContent   = filtered.filter(r=>String(r['Sexo'])==='2').length;
+
+  renderTable();
+}
+
+// Búsqueda global
+function onGlobalInput(inp){
+  const v = inp.value.trim();
+  g('sbClr').classList.toggle('v', v.length > 0);
+  doFilter();
+}
+function clearGlobal(){
+  g('qGlobal').value='';
+  g('sbClr').classList.remove('v');
+  g('sbHint').style.display='none';
+  doFilter();
+  g('qGlobal').focus();
+}
+
+function clearF(){
+  g('qGlobal').value='';
+  g('sbClr').classList.remove('v');
+  g('sbHint').style.display='none';
+  ['fL','fA','fP','fM','fN','fF'].forEach(id=>g(id).value='');
+  g('fS').value=''; gsMode=false; g('gClr').classList.remove('v');
+  doFilter();
+}
+
+// ══ ORDENAR ══
+function doSort(i){
+  sd = sc===i ? -sd : 1; sc=i;
+  for(let k=0;k<7;k++){
+    const el=g('si'+k); if(!el) continue;
+    if(k===i){ el.textContent=sd===1?'↑':'↓'; el.style.opacity='1'; el.style.color='var(--acc)'; }
+    else      { el.textContent='↕'; el.style.opacity='.25'; el.style.color=''; }
+  }
+  doFilter();
+}
+
+// ══ RENDERIZAR ══
+function renderTable(){
+  if(!allData.length && g('tbl').style.display==='none') return;
+
+  // Términos a resaltar por columna
+  const qG = g('qGlobal').value.trim(); // búsqueda global → resalta en todas
+  const hl={
+    'Nº Libro'           : g('fL').value.trim(),
+    'Nº Acta'            : g('fA').value.trim(),
+    'Apellido Paterno'   : gsMode ? '' : g('fP').value.trim(),
+    'Apellido Materno'   : g('fM').value.trim(),
+    'Nombre'             : g('fN').value.trim(),
+    'Fecha de Nacimiento': g('fF').value.trim(),
+  };
+  const gsQ = gsMode ? g('fP').value.trim() : '';
+
+  function cell(h, raw){
+    // prioridad: búsqueda global > búsqueda global del campo > filtro de columna
+    const q = qG || gsQ || hl[h] || '';
+    if(!q) return esc(raw);
+    const lo=raw.toLowerCase(), ql=q.toLowerCase();
+    if(!lo.includes(ql)) return esc(raw);
+    const ix=lo.indexOf(ql);
+    return esc(raw.slice(0,ix))
+      +'<mark class="hl">'+esc(raw.slice(ix,ix+q.length))+'</mark>'
+      +esc(raw.slice(ix+q.length));
+  }
+
+  if(!filtered.length){
+    g('tbody').innerHTML=`<tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--tx3)">
+      Sin resultados — prueba con otros filtros o <a href="#" onclick="clearF();return false;" style="color:var(--acc);text-decoration:none">limpia los filtros</a>
+    </td></tr>`;
+  } else {
+    // Renderizar TODOS los registros filtrados (sin paginación)
+    g('tbody').innerHTML = filtered.map((row, i)=>{
+      const gi  = allData.indexOf(row);
+      const sex = String(row['Sexo']||'');
+      const sexBadge = sex==='1' ? '<span class="bm bh">♂ H</span>'
+                     : sex==='2' ? '<span class="bm bf">♀ M</span>'
+                     : '<span style="color:var(--tx3)">—</span>';
+      return `<tr>
+        <td>${i+1}</td>
+        <td>${cell('Nº Libro',           String(row['Nº Libro']||''))}</td>
+        <td>${cell('Nº Acta',            String(row['Nº Acta']||''))}</td>
+        <td title="${esc(String(row['Apellido Paterno']||''))}">${cell('Apellido Paterno',String(row['Apellido Paterno']||''))}</td>
+        <td class="mat" title="${esc(String(row['Apellido Materno']||''))}">${cell('Apellido Materno',String(row['Apellido Materno']||''))}</td>
+        <td title="${esc(String(row['Nombre']||''))}">${cell('Nombre',String(row['Nombre']||''))}</td>
+        <td>${cell('Fecha de Nacimiento',String(row['Fecha de Nacimiento']||''))}</td>
+        <td>${sexBadge}</td>
+        <td>
+          <button class="abtn ed" onclick="openEdit(${gi})" title="Editar">✏ Editar</button>
+          <button class="abtn dl" onclick="delRow(${gi})"  title="Eliminar">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // barra inferior — solo info, sin botones de página
+  const tot=allData.length, fil=filtered.length;
+  g('cinfo').innerHTML = fil===tot
+    ? `Mostrando <span>${tot}</span> registros`
+    : `Mostrando <span>${fil}</span> de <span>${tot}</span> registros`;
+
+  // ── Renderizar TARJETAS para móvil ──
+  const qGv = g('qGlobal').value.trim().toLowerCase();
+  if(!filtered.length){
+    g('cardList').innerHTML = `<div style="text-align:center;padding:3rem 1rem;color:var(--tx3);font-size:13px">
+      Sin resultados — <a href="#" onclick="clearF();return false;" style="color:var(--acc);text-decoration:none">limpiar filtros</a>
+    </div>`;
+  } else {
+    g('cardList').innerHTML = filtered.map((row,i)=>{
+      const gi  = allData.indexOf(row);
+      const sex = String(row['Sexo']||'');
+      const sexLabel = sex==='1'?'♂ Hombre':sex==='2'?'♀ Mujer':'';
+      const sexClass = sex==='1'?'bh':sex==='2'?'bf':'';
+      const nombre = [row['Apellido Paterno'],row['Apellido Materno'],row['Nombre']]
+        .map(v=>String(v||'').trim()).filter(Boolean).join(' ');
+      return `<div class="rcard">
+        <div class="rcard-top">
+          <div class="rcard-name">${esc(nombre)}</div>
+          <div class="rcard-acta">Acta #${esc(String(row['Nº Acta']||''))}</div>
+        </div>
+        <div class="rcard-meta">
+          <span class="rcard-chip acc">Libro ${esc(String(row['Nº Libro']||''))}</span>
+          ${row['Fecha de Nacimiento']?`<span class="rcard-chip">📅 ${esc(String(row['Fecha de Nacimiento']))}</span>`:''}
+          ${sexLabel?`<span class="rcard-chip bm ${sexClass}" style="border-radius:20px">${sexLabel}</span>`:''}
+        </div>
+        <div class="rcard-actions">
+          <button class="rcard-btn ed" onclick="openEdit(${gi})">✏ Editar</button>
+          <button class="rcard-btn dl" onclick="delRow(${gi})">🗑 Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ══ MODAL ══
+function fillModal(row){
+  g('mL').value = row['Nº Libro']||'';
+  g('mA').value = row['Nº Acta'] ||'';
+  g('mP').value = row['Apellido Paterno']||'';
+  g('mM').value = row['Apellido Materno']||'';
+  g('mN').value = row['Nombre']  ||'';
+  g('mF').value = row['Fecha de Nacimiento']||'';
+  g('mS').value = String(row['Sexo']||'');
+}
+
+function openAdd(){
+  ei=null;
+  g('mtit').textContent='Nuevo registro';
+  g('mbadge').textContent='nuevo';
+  fillModal({});
+  g('ov').classList.add('open');
+  if(!allData.length) revealTable();
+  setTimeout(()=>g('mL').focus(), 90);
+}
+
+function openEdit(idx){
+  ei=idx;
+  g('mtit').textContent='Editar registro';
+  g('mbadge').textContent='acta #'+allData[idx]['Nº Acta'];
+  fillModal(allData[idx]);
+  g('ov').classList.add('open');
+  setTimeout(()=>g('mL').focus(), 90);
+}
+
+function closeModal(){ g('ov').classList.remove('open'); }
+
+async function saveModal(){
+  const libro=g('mL').value.trim(), acta=g('mA').value.trim();
+  const pat  =g('mP').value.trim(), nom =g('mN').value.trim();
+  if(!libro||!acta||!pat||!nom){
+    toast('Completa los campos obligatorios (*)','a'); return;
+  }
+  const obj={
+    'Nº Libro':libro, 'Nº Acta':acta,
+    'Apellido Paterno':pat, 'Apellido Materno':g('mM').value.trim(),
+    'Nombre':nom, 'Fecha de Nacimiento':g('mF').value.trim(),
+    'Sexo':g('mS').value
+  };
+  if(ei===null){ allData.push(obj); toast('Registro guardado','g'); }
+  else         { allData[ei]=obj;   toast('Registro actualizado','b'); }
+  closeModal(); autoSave(); doFilter();
+}
+
+async function delRow(idx){
+  const r=allData[idx];
+  if(!confirm(`¿Eliminar acta Nº ${r['Nº Acta']} — ${r['Nombre']} ${r['Apellido Paterno']}?`)) return;
+  const delIdx = allData.indexOf(row);
+  allData.splice(delIdx,1);
+  doFilter();
+  await saveCloud('del', {index:delIdx});
+  toast('Registro eliminado'+(cloudMode?' ☁':''),'r');
+}
+
+// ══ SINCRONIZAR MANUALMENTE ══
+async function syncCloud(){
+  if(!cloudMode){ toast('Configura la URL del script primero','a'); return; }
+  toast('Sincronizando…','b');
+  const ok = await loadCloud();
+  if(ok){ doFilter(); toast(`${allData.length} registros actualizados ☁`,'g'); }
+  else   { toast('Error al sincronizar','r'); }
+}
+
+// sync btn se muestra en window.onload
+
+// ══ EXPORTAR EXCEL ══
+function exportExcel(){
+  if(!allData.length){ toast('No hay datos para exportar','r'); return; }
+  const wsData=[H,...allData.map(r=>H.map(h=>r[h]))];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:10},{wch:10},{wch:18},{wch:18},{wch:22},{wch:16},{wch:8}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Registros');
+  XLSX.writeFile(wb,'registro_civil_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Excel exportado','g');
+}
+
+// ══ EVENTOS GLOBALES ══
+// todos los eventos se asignan en window.onload abajo
+
+</script>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="llogo">📋</div>
+    <h1>Registro Civil</h1>
+    <p class="lsub">Gestión de actas de nacimiento</p>
+    <div class="fg">
+      <label>Usuario</label>
+      <input type="text" id="lu" placeholder="usuario" autocomplete="username">
+    </div>
+    <div class="fg">
+      <label>Contraseña</label>
+      <div class="fg-pass">
+        <input type="password" id="lp" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="eye-btn" onclick="togglePass()" id="eyeBtn" title="Mostrar/ocultar contraseña">👁</button>
+      </div>
+    </div>
+    <button class="lbtn" onclick="doLogin()">Ingresar</button>
+    <div class="lerr" id="lerr">Usuario o contraseña incorrectos</div>
+    <div class="lhint">Sistema de Registro Civil — C.P. Huamani</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tlogo">⬡ Reg. Civil</div>
+    <div class="tsep"></div>
+    <div class="tchip">
+      <span class="tchip-n" id="cTot">0</span>
+      <span class="tchip-l">total</span>
+    </div>
+    <div class="tchip">
+      <span class="tchip-n" id="cFil">0</span>
+      <span class="tchip-l">mostrando</span>
+    </div>
+    <div class="tchip h">
+      <span class="tchip-n" id="cH">0</span>
+      <span class="tchip-l">♂</span>
+    </div>
+    <div class="tchip m">
+      <span class="tchip-n" id="cM">0</span>
+      <span class="tchip-l">♀</span>
+    </div>
+    <div class="tsp"></div>
+    <div class="gpill" id="gpill">
+      <div class="gdot"></div>
+      <span id="gtxt">Guardado</span>
+    </div>
+    <div class="tsep"></div>
+    <label class="tbtn" for="fileInput" title="Importar Excel">
+      📂 <span class="lbl">Importar</span>
+    </label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+    <button class="tbtn pri" onclick="openAdd()" title="Nuevo (Ctrl+N)">
+      ＋ <span class="lbl">Nuevo</span>
+    </button>
+    <button class="tbtn" id="syncBtn" onclick="syncCloud()" title="Sincronizar con Google Sheets" style="display:none">
+      ↻ <span class="lbl">Sync</span>
+    </button>
+    <button class="tbtn suc" onclick="exportExcel()" title="Exportar Excel">
+      ⬇ <span class="lbl">Exportar</span>
+    </button>
+    <button class="tbtn dan" onclick="doLogout()" title="Salir">⏻</button>
+  </div>
+
+  <!-- BÚSQUEDA GLOBAL -->
+  <div class="searchbar">
+    <div class="sb-wrap">
+      <span class="sb-ico">🔍</span>
+      <input type="text" id="qGlobal"
+        placeholder="Buscar por nombre, apellido paterno, apellido materno, Nº acta…"
+        oninput="onGlobalInput(this)" autocomplete="off">
+      <button class="sb-clr" id="sbClr" onclick="clearGlobal()">✕ Limpiar búsqueda</button>
+    </div>
+    <div class="sb-hint" id="sbHint" style="display:none">
+      <span id="sbCount"></span> resultado(s) para "<span id="sbTerm"></span>"
+    </div>
+  </div>
+
+  <!-- TABLA SCROLLABLE -->
+  <div class="main">
+    <div class="twrap" id="twrap">
+
+      <!-- Vacío -->
+      <div class="empty-s" id="emptyS">
+        <div class="ei">📋</div>
+        <h2>Sin registros</h2>
+        <p>
+          Usa <kbd>＋ Nuevo</kbd> para agregar el primer registro<br>
+          o <kbd>📂 Importar</kbd> para cargar un archivo Excel.<br>
+          Los datos se guardan automáticamente en este navegador.
+        </p>
+      </div>
+
+      <!-- Tabla — se muestra cuando hay datos -->
+      <table id="tbl" style="display:none">
+        <colgroup>
+          <col class="c-num">
+          <col class="c-libro">
+          <col class="c-acta">
+          <col class="c-pat">
+          <col class="c-mat">
+          <col class="c-nom">
+          <col class="c-fecha">
+          <col class="c-sexo">
+          <col class="c-acc">
+        </colgroup>
+        <thead>
+          <!-- Fila etiquetas + click para ordenar -->
+          <tr class="hr">
+            <th>#</th>
+            <th onclick="doSort(0)">Nº Libro <span class="si" id="si0">↕</span></th>
+            <th onclick="doSort(1)">Nº Acta  <span class="si" id="si1">↕</span></th>
+            <th onclick="doSort(2)">Ap. Paterno <span class="si" id="si2">↕</span></th>
+            <th class="mat" onclick="doSort(3)">Ap. Materno <span class="si" id="si3">↕</span></th>
+            <th onclick="doSort(4)">Nombre <span class="si" id="si4">↕</span></th>
+            <th onclick="doSort(5)">Fecha Nac. <span class="si" id="si5">↕</span></th>
+            <th onclick="doSort(6)">Sexo <span class="si" id="si6">↕</span></th>
+            <th></th>
+          </tr>
+          <!-- Fila filtros por columna -->
+          <tr class="fr">
+            <th>
+              <button class="clr-all" onclick="clearF()" title="Limpiar todos los filtros">✕</button>
+            </th>
+            <th><input type="text" id="fL" placeholder="…" oninput="doFilter()"></th>
+            <th><input type="text" id="fA" placeholder="…" oninput="doFilter()"></th>
+            <th>
+              <!-- Campo de Ap. Paterno actúa también como buscador global con el ícono 🔍 -->
+              <div class="gs">
+                <span class="gs-ico">🔍</span>
+                <input type="text" id="fP" placeholder="Buscar todo…" oninput="onGS(this)">
+                <button class="gs-clr" id="gClr" onclick="clearGS()">✕</button>
+              </div>
+            </th>
+            <th class="mat"><input type="text" id="fM" placeholder="…" oninput="doFilter()"></th>
+            <th><input type="text" id="fN" placeholder="…" oninput="doFilter()"></th>
+            <th><input type="text" id="fF" placeholder="…" oninput="doFilter()"></th>
+            <th>
+              <select id="fS" onchange="doFilter()">
+                <option value="">Todos</option>
+                <option value="1">♂ Hombre</option>
+                <option value="2">♀ Mujer</option>
+              </select>
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <!-- VISTA TARJETAS (móvil) -->
+      <div id="cardList"></div>
+    </div>
+
+    <!-- BARRA INFERIOR: solo muestra el conteo, sin páginas -->
+    <div class="countbar" id="countbar" style="display:none">
+      <span class="cinfo" id="cinfo">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ══ -->
+<div class="overlay" id="ov">
+  <div class="modal">
+    <div class="mh">
+      <h2 id="mtit">Nuevo registro</h2>
+      <span class="mbadge" id="mbadge">nuevo</span>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="mgrid">
+        <div class="mf">
+          <label>Nº Libro<span class="req">*</span></label>
+          <input type="number" id="mL" min="1" placeholder="Ej: 12" inputmode="numeric">
+        </div>
+        <div class="mf">
+          <label>Nº Acta<span class="req">*</span></label>
+          <input type="number" id="mA" min="1" placeholder="Ej: 345" inputmode="numeric">
+        </div>
+        <div class="mf">
+          <label>Apellido Paterno<span class="req">*</span></label>
+          <input type="text" id="mP" placeholder="Ej: García" autocomplete="off">
+        </div>
+        <div class="mf">
+          <label>Apellido Materno</label>
+          <input type="text" id="mM" placeholder="Ej: López" autocomplete="off">
+        </div>
+        <div class="mf full">
+          <label>Nombre(s)<span class="req">*</span></label>
+          <input type="text" id="mN" placeholder="Ej: Juan Carlos" autocomplete="off">
+        </div>
+        <div class="mf">
+          <label>Fecha de Nacimiento</label>
+          <input type="text" id="mF" placeholder="dd/mm/aaaa" inputmode="numeric">
+        </div>
+        <div class="mf">
+          <label>Sexo</label>
+          <select id="mS">
+            <option value="">Seleccionar…</option>
+            <option value="1">1 — Hombre</option>
+            <option value="2">2 — Mujer</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="bcnl" onclick="closeModal()">Cancelar</button>
+      <button class="bsav" onclick="saveModal()">Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+</body>
+</html>
